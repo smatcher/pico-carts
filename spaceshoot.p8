@@ -1,130 +1,146 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
+--particles
+particles = {}
+
+function particles:new(o)
+ o = o or {}
+ setmetatable(o, self)
+ self.__index = self
+ return o
+end
+
+function particles:draw()
+ pset(20,20,7)
+end
+
 -- starfield
 function init_starfield()
-	starfield = {
-		mood = 0,
-		values = {},
-		palettes = {
-			{ 5,  6,  7}, -- white
-			{ 2,  8, 15}, -- red
-			{ 3,  4, 11}, -- green
-			{ 1, 12, 13}, -- blue
-		}
-	}
-	for i=1, 100 do
-		starfield.values[i] = {
-			x = flr(rnd(128)),
-			y = flr(rnd(128)),
-			color = flr(rnd(3)),
-			layer = 1+rnd(3),
-		}
-	end
+ starfield = {
+  mood = 0,
+  values = {},
+  palettes = {
+   { 5,  6,  7}, -- white
+   { 2,  8, 15}, -- red
+   { 3,  4, 11}, -- green
+   { 1, 12, 13}, -- blue
+  }
+ }
+ for i=1, 100 do
+  starfield.values[i] = {
+   x = flr(rnd(128)),
+   y = flr(rnd(128)),
+   color = flr(rnd(3)),
+   layer = 1+rnd(3),
+  }
+ end
 end
 
 function draw_starfield()
-	local mood = flr(starfield.mood) + 1
-	local palette = starfield.palettes[mood]
-	for i=0, 2 do
-		pal(i, palette[i+1])
-	end
-	for v in all(starfield.values) do
-		pset(v.x, v.y, v.color)
-	end
-	pal()
+ local mood = flr(starfield.mood) + 1
+ local palette = starfield.palettes[mood]
+ for i=0, 2 do
+  pal(i, palette[i+1])
+ end
+ for v in all(starfield.values) do
+  pset(v.x, v.y, v.color)
+ end
+ pal()
 end
 
 function update_starfield()
-	for v in all(starfield.values) do
-		-- move down
-		v.y = v.y + v.layer
-		if v.y > 128 then v.y = v.y - 128 end
+ for v in all(starfield.values) do
+  -- move down
+  v.y = v.y + v.layer
+  if v.y > 128 then v.y = v.y - 128 end
 
-		-- move with player
-		if btn(0) then v.x=v.x+v.layer end
-		if btn(1) then v.x=v.x-v.layer end
-		if v.x > 128 then v.x = v.x - 128 end
-		if v.x <   0 then v.x = v.x + 128 end
-	end
-	
-	starfield.mood = starfield.mood + 0.03
-	if starfield.mood >= 4 then starfield.mood = 0 end
+  -- move with player
+  if btn(0) then v.x=v.x+v.layer end
+  if btn(1) then v.x=v.x-v.layer end
+  if v.x > 128 then v.x = v.x - 128 end
+  if v.x <   0 then v.x = v.x + 128 end
+ end
+ 
+ starfield.mood = starfield.mood + 0.03
+ if starfield.mood >= 4 then starfield.mood = 0 end
 end
 
 -- particles
 function init_particles(p, nb_particles)
-	p.values = {}
-	for i=1,nb_particles do
-		p.values[i] = {
-			x = 32 + flr(rnd(2)),
-			y = 32 + flr(rnd(2)),
-			vx = rnd(2) - 1,
-			vy = rnd(2) - 1,
-			color = 7,
-		}
-	end
+ p.values = {}
+ for i=1,nb_particles do
+  p.values[i] = {
+   x = 32 + flr(rnd(2)),
+   y = 32 + flr(rnd(2)),
+   vx = rnd(2) - 1,
+   vy = rnd(2) - 1,
+   color = 7,
+  }
+ end
 end
 
 function draw_particles(p)
-	for v in all(p.values) do
-		if v.color != 0 then
-			pset(v.x, v.y, v.color)
-		end
-	end
+ for v in all(p.values) do
+  if v.color != 0 then
+   pset(v.x, v.y, v.color)
+  end
+ end
 end
 
 function update_particles(p)
-	for v in all(p.values) do
-		v.x = v.x + v.vx
-		v.y = v.y + v.vy
-	end
+ for v in all(p.values) do
+  v.x = v.x + v.vx
+  v.y = v.y + v.vy
+ end
 end
 
 -- ship
 function init_ship()
-	ship = {
-		x = 64,
-		y = 64,
-		t_anim = 0,
-		thruster_particles = {}
-	}
-	
-	init_particles(
-		ship.thruster_particles,
-		32
-	)
+ ship = {
+  x = 64,
+  y = 64,
+  t_anim = 0,
+  thruster_particles = {}
+ }
+ 
+ init_particles(
+  ship.thruster_particles,
+  32
+ )
 end
 
 function draw_ship()
-	spr(1+((ship.t_anim/3)%3),ship.x,ship.y)
-	draw_particles(ship.thruster_particles)
+ spr(1+((ship.t_anim/3)%3),ship.x,ship.y)
+ draw_particles(ship.thruster_particles)
 end
 
 function update_ship()
-	ship.t_anim = ship.t_anim+1
-	if (btn(0)) then ship.x=ship.x-1.5 end
-	if (btn(1)) then ship.x=ship.x+1.5 end
-	if (btn(2)) then ship.y=ship.y-1.5 end
-	if (btn(3)) then ship.y=ship.y+1.5 end
-	update_particles(ship.thruster_particles)
+ ship.t_anim = ship.t_anim+1
+ if (btn(0)) then ship.x=ship.x-1.5 end
+ if (btn(1)) then ship.x=ship.x+1.5 end
+ if (btn(2)) then ship.y=ship.y-1.5 end
+ if (btn(3)) then ship.y=ship.y+1.5 end
+ update_particles(ship.thruster_particles)
 end
 
 -- global functions
 function _init()
-	init_starfield()
-	init_ship()
+ p = particles:new()
+ init_starfield()
+ init_ship()
 end
 
 function _draw()
-	cls()
-	draw_starfield()
-	draw_ship()
+ cls()
+ draw_starfield()
+ draw_ship()
+ p:draw()
 end
 
 function _update()
-	update_starfield()
-	update_ship()
+ update_starfield()
+ update_ship()
 end
 __gfx__
 00000000000880000008800000088000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
