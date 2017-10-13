@@ -1,6 +1,26 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
+--utils
+function fmap(fn, vals)
+ for v in all(vals) do
+  fn(v)
+ end
+end
+
+function apply_palette(p)
+ for i=1, #p do
+  pal(i-1, p[i])
+ end
+end
+
+palettes = {
+ white = { 5,  6,  7},
+ red=    { 2,  8, 15},
+ green = { 3,  4, 11},
+ blue =  { 1, 12, 13},
+}
+
 --particles
 particles = {}
 
@@ -8,11 +28,34 @@ function particles:new(o)
  o = o or {}
  setmetatable(o, self)
  self.__index = self
+
+ o.drawi = function(p) pset(p.x, p.y, p.color) end
+
  return o
 end
 
 function particles:draw()
- pset(20,20,7)
+ if self.predraw then
+  self:predraw()
+ end
+ if self.drawi then
+  fmap(self.drawi, self.values)
+ end
+ if self.afterdraw then
+  self:afterdraw()
+ end
+end
+
+function particles:update()
+ if self.preupdate then
+  self:preupdate()
+ end
+ if self.updatei then
+  fmap(self.updatei, self.values)
+ end
+ if self.afterupdate then
+  self:afterupdate()
+ end
 end
 
 -- starfield
