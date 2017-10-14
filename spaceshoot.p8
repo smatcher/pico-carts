@@ -45,7 +45,7 @@ function update_inputs()
   input.shoot = false
  elseif btn(4) then
   input.shoot = true
-  input.shoot_timeout = 30
+  input.shoot_timeout = 20
  else
  input.shoot = false
  end
@@ -130,14 +130,30 @@ function init_starfield()
   if self.mood >= #self.palettes then self.mood = 0 end
  end
 
- function starfield.predraw(self)
-  local mood = flr(self.mood) + 1
-  apply_palette(self.palettes[mood])
+-- function starfield.predraw(self)
+--  local mood = flr(self.mood) + 1
+--  apply_palette(self.palettes[mood])
+-- end
+--
+-- function starfield.postdraw(self)
+--  pal()
+-- end
+
+ function starfield.drawi(p)
+  local minrange2 = -1
+  local palette = palettes.white
+  for l in all(light_sources) do
+   local dx = l.x - p.x
+   local dy = l.y - p.y
+   local r2 = dx*dx + dy*dy
+   if r2 < l.lrange2 and (minrange2 == -1 or minrange2 > r2) then
+     palette = l.palette
+     minrange2 = r2
+   end
+  end
+  pset(p.x, p.y, palette[p.color +1])
  end
 
- function starfield.postdraw(self)
-  pal()
- end
 end
 
 -- thrusters
@@ -187,8 +203,17 @@ projectile = {
  x = 64,
  y = 64,
  t_anim = 0,
- speed = 1,
+ speed = 2,
+ pool = {},
 }
+
+function draw_projectiles()
+ fmap(projectile.draw, projectile.pool)
+end
+
+function update_projectiles()
+ fmap(projectile.update, projectile.pool)
+end
 
 function projectile:new(o, x, y)
  o = o or {}
@@ -197,6 +222,15 @@ function projectile:new(o, x, y)
 
  if x then o.x = x end
  if y then o.y = y end
+
+ o.light_source = {
+  lrange2 = 16*16,
+  palette = palettes.green,
+  x=x,
+  y=y,
+ }
+ add(light_sources, o.light_source)
+ add(projectile.pool, o)
 
  return o
 end
@@ -208,8 +242,15 @@ end
 function projectile:update()
  self.y = self.y - self.speed
  self.t_anim = self.t_anim + 1
- -- debug
- if self.y < 0 then self.y = 128 end
+ self.light_source.x = self.x
+ self.light_source.y = self.y
+
+ if self.y < 0 then self:remove() end
+end
+
+function projectile:remove()
+ del(light_sources, self.light_source)
+ del(projectile.pool, self)
 end
 
 -- ship
@@ -218,10 +259,22 @@ function init_ship()
   x = 64,
   y = 64,
   t_anim = 0,
-  thruster_particles = {}
+  thruster_particles = {},
  }
  
  ship.thruster_particles = new_thrusters(ship)
+
+ ship.thruster_light_source = {
+  lrange2 = 16*16,
+  palette = palettes.yellow,
+  update = function(self)
+   self.x = ship.x + 4
+   self.y = ship.y + 16
+  end,
+ }
+ add(light_sources, ship.thruster_light_source)
+
+ ship.thruster_light_source:update()
 end
 
 function draw_ship()
@@ -233,33 +286,37 @@ function update_ship()
  ship.t_anim = ship.t_anim+1
  ship.x = ship.x + 1.5 * input.x
  ship.y = ship.y + 1.5 * input.y
+
+ship.x = mid(0, ship.x, 120)
+ship.y = mid(0, ship.y, 120)
  ship.thruster_particles:update()
+ ship.thruster_light_source:update()
 
  if input.shoot then
-  plasma = projectile:new({}, ship.x, ship.y - 2)
+  projectile:new({}, ship.x, ship.y - 2)
  end
 end
 
 -- global functions
 function _init()
+ light_sources = {}
  init_inputs()
  init_starfield()
  init_ship()
- plasma = projectile:new()
 end
 
 function _draw()
  cls()
  starfield:draw()
  draw_ship()
- plasma:draw()
+ draw_projectiles()
 end
 
 function _update()
  update_inputs()
  starfield:update()
  update_ship()
- plasma:update()
+ update_projectiles()
 end
 __gfx__
 00000000000880000008800000088000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
