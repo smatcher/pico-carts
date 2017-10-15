@@ -14,6 +14,10 @@ function apply_palette(p)
  end
 end
 
+function rect_collide(r1, r2)
+ return r1.x+r1.w > r2.x and r1.x < r2.x+r2.w and r1.y+r1.h > r2.y and r1.y < r2.y+r2.h 
+end
+
 palettes = {
  white = { 5,  6,  7},
  red=    { 2,  8, 15},
@@ -204,6 +208,7 @@ projectile = {
  y = 64,
  t_anim = 0,
  speed = 2,
+ punch_through = false,
  pool = {},
 }
 
@@ -246,6 +251,23 @@ function projectile:update()
  self.light_source.y = self.y
 
  if self.y < 0 then self:remove() end
+
+ local r = {
+  x = self.x+2,
+  y = self.y+2,
+  w = 4,
+  h = 4,
+ }
+
+ for s in all(ship.pool) do
+  if rect_collide(r, s:get_collision_rect()) then
+   destroy_ship(s)
+   if not self.punch_through then
+    self:remove()
+    return
+   end
+  end
+ end
 end
 
 function projectile:remove()
@@ -254,46 +276,121 @@ function projectile:remove()
 end
 
 -- ship
+ship = {
+ x = 64,
+ y = 64,
+ t_anim = 0,
+ pool = {},
+}
+
+function ship:new(o, x, y)
+ o = o or {}
+ setmetatable(o, self)
+ self.__index = self
+
+ if x then o.x = x end
+ if y then o.y = y end
+
+ add(ship.pool, o)
+
+ return o
+end
+
+function ship:draw()
+ if self.predraw then
+  self:predraw()
+ end
+ spr(self:anim_spr(), self.x, self.y)
+ if self.postdraw then
+  self:postdraw()
+ end
+end
+
+function ship:update()
+ if self.preupdate then
+  self:preupdate()
+ end
+ self.t_anim = self.t_anim + 1
+ if self.postudpate then
+  self:postupdate()
+ end
+end
+
+function ship:get_collision_rect()
+ return {x=self.x, y=self.y, w=8, h=8}
+end
+
+function ship:remove()
+ if self.preremove then
+  self:preremove()
+ end
+ del(ship.pool, self)
+end
+
+function draw_ships()
+ fmap(ship.draw, ship.pool)
+end
+
+function update_ships()
+ fmap(ship.update, ship.pool)
+end
+
+function destroy_ship(s)
+ if s.ondestroyed then
+  s:ondestroyed()
+ end
+ s:remove()
+end
+
+-- enemy ship
+function new_enemyship(x, y)
+ local o = ship:new({
+  anim_spr = function(self)
+   return 6+((self.t_anim/3)%4)
+  end,
+
+  
+ }, x, y)
+ return o
+end
+
+-- player ship
 function init_ship()
- ship = {
-  x = 64,
-  y = 64,
+ pship = {
+  x = 60,
+  y = 90,
   t_anim = 0,
   thruster_particles = {},
  }
  
- ship.thruster_particles = new_thrusters(ship)
+ pship.thruster_particles = new_thrusters(pship)
 
- ship.thruster_light_source = {
+ pship.thruster_light_source = {
   lrange2 = 16*16,
   palette = palettes.yellow,
   update = function(self)
-   self.x = ship.x + 4
-   self.y = ship.y + 16
+   self.x = pship.x + 4
+   self.y = pship.y + 16
   end,
  }
- add(light_sources, ship.thruster_light_source)
+ add(light_sources, pship.thruster_light_source)
 
- ship.thruster_light_source:update()
+ pship.thruster_light_source:update()
 end
 
 function draw_ship()
- spr(1+((ship.t_anim/3)%3),ship.x,ship.y)
- ship.thruster_particles:draw()
+ spr(1+((pship.t_anim/3)%3),pship.x,pship.y)
+ pship.thruster_particles:draw()
 end
 
 function update_ship()
- ship.t_anim = ship.t_anim+1
- ship.x = ship.x + 1.5 * input.x
- ship.y = ship.y + 1.5 * input.y
-
-ship.x = mid(0, ship.x, 120)
-ship.y = mid(0, ship.y, 120)
- ship.thruster_particles:update()
- ship.thruster_light_source:update()
-
+ pship.t_anim = pship.t_anim+1
+ pship.x = mid(0, 120, pship.x + 1.5 * input.x)
+ pship.y = mid(0, 120, pship.y + 1.5 * input.y)
+ pship.thruster_particles:update()
+ pship.thruster_light_source:update()
  if input.shoot then
-  projectile:new({}, ship.x, ship.y - 2)
+  projectile:new({}, pship.x, pship.y - 2)
  end
 end
 
@@ -303,12 +400,17 @@ function _init()
  init_inputs()
  init_starfield()
  init_ship()
+
+ new_enemyship(28, 16)
+ new_enemyship(60, 16)
+ new_enemyship(92, 16)
 end
 
 function _draw()
  cls()
  starfield:draw()
  draw_ship()
+ draw_ships()
  draw_projectiles()
 end
 
@@ -316,17 +418,18 @@ function _update()
  update_inputs()
  starfield:update()
  update_ship()
+ update_ships()
  update_projectiles()
 end
 __gfx__
-00000000000880000008800000088000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000880000008800000088000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000110000001100000011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000008118000081180000811800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000078118700c8118c007811870000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-007007007888888778888887c888888c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000888998888889988888899888000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000008009a008800aa008800a9008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000088000000880000008800000000000000000000cc22cc002c2ec2002cccc800ec22c80000000000000000000000000000000000000000000000000
+0000000000088000000880000008800000000000000000002bb823322338e33223328bb8eb32233e000000000000000000000000000000000000000000000000
+00700700000110000001100000011000000000000000000023bb33322333bb32233333b8833333be000000000000000000000000000000000000000000000000
+00077000008118000081180000811800000000000000000008b33320023bb320023333e008333380000000000000000000000000000000000000000000000000
+00077000078118700c8118c00781187000000000000000000ee002200220082002200ee002200280000000000000000000000000000000000000000000000000
+007007007888888778888887c888888c00000000000000000e00002002000020020000e002000020000000000000000000000000000000000000000000000000
+0000000088899888888998888889988800000000000000000e000020022008200020080002200220000000000000000000000000000000000000000000000000
+000000008009a008800aa008800a9008000000000000000000800200002002000002800000200200000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00033000000330000003300000033000000330000003300000000000000000000000000000000000000000000000000000000000000000000000000000000000
