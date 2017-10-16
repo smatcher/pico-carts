@@ -2,10 +2,12 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 --utils
-function fmap(fn, vals)
- for v in all(vals) do
-  fn(v)
+function copy(o)
+ local c = {}
+ for k,v in pairs(o) do
+  c[k] = v
  end
+ return c
 end
 
 function apply_palette(p)
@@ -106,7 +108,7 @@ function particles:draw()
   self:predraw()
  end
  if self.drawi then
-  fmap(self.drawi, self.values)
+  foreach(self.values, self.drawi)
  end
  if self.postdraw then
   self:postdraw()
@@ -118,7 +120,7 @@ function particles:update()
   self:preupdate()
  end
  if self.updatei then
-  fmap(self.updatei, self.values)
+  foreach(self.values, self.updatei)
  end
  if self.postupdate then
   self:postupdate()
@@ -224,11 +226,11 @@ function explosion:update()
 end
 
 function draw_explosions()
- fmap(explosion.draw, explosion.pool)
+ foreach(explosion.pool, explosion.draw)
 end
 
 function update_explosions()
- fmap(explosion.update, explosion.pool)
+ foreach(explosion.pool, explosion.update)
 end
 
 -- thrusters
@@ -289,11 +291,11 @@ projectile = {
 }
 
 function draw_projectiles()
- fmap(projectile.draw, projectile.pool)
+ foreach(projectile.pool, projectile.draw)
 end
 
 function update_projectiles()
- fmap(projectile.update, projectile.pool)
+ foreach(projectile.pool, projectile.update)
 end
 
 function projectile:new(o, x, y)
@@ -405,11 +407,11 @@ function ship:remove()
 end
 
 function draw_ships()
- fmap(ship.draw, ship.pool)
+ foreach(ship.pool, ship.draw)
 end
 
 function update_ships()
- fmap(ship.update, ship.pool)
+ foreach(ship.pool, ship.update)
 end
 
 function destroy_ship(s)
@@ -439,7 +441,7 @@ function new_enemyship(x, y)
     self.x = self.x - 0.5
    end
    if (self.t_anim % 30) == 0 then
-    projectile:new(weapons.enemy.leech, self.x, self.y)
+    projectile:new(copy(weapons.enemy.leech), self.x, self.y)
    end
   end,
  }, x, y)
@@ -472,7 +474,7 @@ function new_playership(x, y)
    self.thruster_particles:update()
    self.thruster_light_source:update()
    if input.shoot then
-    projectile:new(self.weapons[self.weapon+1], self.x, self.y - 2)
+    projectile:new(copy(self.weapons[self.weapon+1]), self.x, self.y - 2)
    end
    if input.switch then
     self.weapon = (self.weapon+1) % #self.weapons
