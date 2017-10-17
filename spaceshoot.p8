@@ -33,6 +33,11 @@ function init_screen_fade_palettes()
   red_screen_fade_palette[i] = p
  end
 
+ default_screen_palette = {}
+ for i=1,16 do
+  default_screen_palette[i] = peekr(0x003e + (i-1)*0x0040)
+ end
+
  dead_screen_palette = {}
  for i=1,16 do
   dead_screen_palette[i] = peekl(0x003f + (i-1)*0x0040)
@@ -117,6 +122,13 @@ function init_inputs()
 end
 
 function update_inputs()
+ if not player_alive and time_since_player_death > 20 then
+  if btn() != 0 then
+   restart_level()
+   init_inputs()
+  end
+ end
+
  input.x = 0
  input.y = 0
 
@@ -353,6 +365,12 @@ function update_projectiles()
  foreach(projectile.pool, projectile.update)
 end
 
+function remove_all_projectiles()
+ for p in all(projectile.pool) do
+  p:remove()
+ end
+end
+
 function projectile:new(o, x, y)
  o = o or {}
  setmetatable(o, self)
@@ -470,6 +488,12 @@ function update_ships()
  foreach(ship.pool, ship.update)
 end
 
+function remove_all_ships()
+ for s in all(ship.pool) do
+  s:remove()
+ end
+end
+
 function hit_ship(ship, projectile)
  ship.health -= projectile.damage
  if ship.health > 0 then
@@ -493,10 +517,10 @@ function new_enemyship(x, y)
   health = 2,
 
   anim_spr = function(self)
-  	local beg = 6
-  	if self.health == 1 then
-  		beg = 26
-  	end
+   local beg = 6
+   if self.health == 1 then
+    beg = 26
+   end
    return beg+((self.t_anim/3)%4)
   end,
 
@@ -529,9 +553,9 @@ function new_playership(x, y)
   anim_spr = function(self)
    local beg = 0
    if self.health == 2 then
-   	beg = 42
+    beg = 42
    elseif self.health == 1 then
-   	beg = 58
+    beg = 58
    end
    return beg+((self.t_anim/3)%3)
   end,
@@ -541,6 +565,7 @@ function new_playership(x, y)
    del(light_sources, self.thruster_light_source)
    apply_palette(dead_screen_palette, 1)
    player_alive = false
+   time_since_player_death = 0
   end,
 
   postdraw = function(self)
@@ -580,6 +605,7 @@ function new_playership(x, y)
  end
 
  player_alive = true
+ time_since_player_death = 0
 
  return o
 end
@@ -612,11 +638,42 @@ function start_hitanim()
 end
 
 function draw_gameover()
- for i=0,15 do
-  local sy = 4*(i%2)
-  sspr(120, 16+sy, 8, 4, i*8, 57)
-  sspr(120, 20-sy, 8, 4, i*8, 73)
+ local display_height = 48
+ local fadein_anim = min(time_since_player_death*0.05, 1.0)
+ local top = display_height - fadein_anim*8
+ local bottom = display_height + fadein_anim*8
+
+ color(0)
+ rectfill(0, top, 127, bottom)
+
+ if fadein_anim > 0.5 then
+  color(fadein_anim > 0.75 and 7 or 1)
+  print("game over", 46, display_height - 1)
  end
+
+ local anim_t = (global_t * 0.2)%16 -- ranges 0-15
+ if fadein_anim > 0.95 then
+  color(anim_t < 8 and 7 or 1)
+  print("press any key to retry", 20, 90)
+ end
+
+ for i=0,17 do
+  local sy = 4*(i%2)
+  sspr(120, 20-sy, 8, 4, i*8 + anim_t - 16, top)
+  sspr(120, 16+sy, 8, 4, i*8 - anim_t, bottom)
+ end
+end
+
+function restart_level()
+ remove_all_projectiles()
+ remove_all_ships()
+
+ new_playership(60, 96)
+ new_enemyship(28, 16)
+ new_enemyship(60, 16)
+ new_enemyship(92, 16)
+
+ apply_palette(default_screen_palette, 1)
 end
 
 -- global functions
@@ -641,7 +698,10 @@ function _draw()
  draw_projectiles()
  draw_explosions()
  draw_hitanim()
- draw_gameover()
+
+ if not player_alive then
+  draw_gameover()
+ end
 end
 
 function _update()
@@ -652,6 +712,10 @@ function _update()
  update_projectiles()
  update_explosions()
  update_hitanim()
+
+ if not player_alive then
+  time_since_player_death += 1
+ end
 end
 __gfx__
 0008800000088000000880000000000000000000000000000cc22cc002c2ec2002cccc800ec22c80000000003000000303000000000000000000000000000000
