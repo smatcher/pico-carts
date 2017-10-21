@@ -89,6 +89,7 @@ weapons = {
     spr_begin = 16,
     hurt_fx = hurt_fx.player_plasma,
     ui_spr = 45,
+    ui_name = "plasma",
    },
    torpedo = {
     speed = 1,
@@ -97,6 +98,7 @@ weapons = {
     spr_begin = 48,
     hurt_fx = hurt_fx.player_torpedo,
     ui_spr = 61,
+    ui_name = "torpedo",
    },
   },
   enemy = {
@@ -687,22 +689,21 @@ function draw_ui()
 
  palt(0, false)
  palt(7, true)
- -- top
- spr(96, 0, 104)
- spr(96, 2, 104)
- spr(96, 8, 104)
- -- mid
- spr(112, 0, 112)
- spr(112, 8, 112)
- spr(112, 0, 120)
- spr(112, 8, 120)
+ for i=0,4 do
+  -- top
+  spr(96, i*8 - 4, 112)
+  spr(96, i*8, 112)
+  -- mid
+  spr(112, i*8, 120)
+ end
  -- right
- spr(97, 16, 112)
- spr(113, 16, 120)
+ spr(97, 5*8, 120)
  palt()
 
  local player_weapon = player_ship.weapons[player_ship.weapon+1]
- spr(player_weapon.ui_spr, 4, 116)
+ local text_align = #player_weapon.ui_name == 7 and 1 or 3
+ print(player_weapon.ui_name, text_align, 122, 11)
+ spr(player_weapon.ui_spr, 30, 120)
 end
 
 -- global functions
