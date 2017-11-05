@@ -650,6 +650,7 @@ function draw_hitanim()
   local palette_anim = flr(hit_anim / 3)
   if palette_anim >= #red_screen_fade_palette then
    run_hit_anim = false
+   glitches = {}
   else
    apply_palette(red_screen_fade_palette[palette_anim + 1], 1)
   end
@@ -665,6 +666,9 @@ end
 function start_hitanim()
  hit_anim = 0
  run_hit_anim = true
+ for i=1,3 do
+  add(glitches, {y = flr(rnd(127)), direction = rnd(2) < 1})
+ end
 end
 
 function draw_gameover()
@@ -795,11 +799,32 @@ function draw_ui()
  palt()
 end
 
+function draw_glitch(line, direction)
+ local addr = 0x6000 + line * 64
+ local ptr_offset = direction and 1 or -1
+ local prev1 = 0
+ local prev2 = 0
+ for i=0,255 do
+  local peeked = rnd(40) < 1 and flr(rnd(255)) or peek(addr)
+  poke(addr, prev2)
+  prev2 = prev1
+  prev1 = peeked
+  addr += ptr_offset
+ end
+end
+
+function draw_screen_fx()
+ for g in all(glitches) do
+  draw_glitch(g.y, g.direction)
+ end
+end
+
 -- global functions
 function _init()
  global_t = 0
  init_screen_fade_palettes()
  light_sources = {}
+ glitches = {}
  init_inputs()
  init_starfield()
  init_hitanim()
@@ -822,6 +847,7 @@ function _draw()
   draw_gameover()
  else
   draw_ui()
+  draw_screen_fx()
  end
 end
 
