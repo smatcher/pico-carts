@@ -667,7 +667,7 @@ function start_hitanim()
  hit_anim = 0
  run_hit_anim = true
  for i=1,3 do
-  add(glitches, {y = flr(rnd(127)), direction = rnd(2) < 1})
+  add(glitches, {y = 6 + flr(rnd(113)), direction = rnd(2) < 1})
  end
 end
 
