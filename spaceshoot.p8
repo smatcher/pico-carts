@@ -102,6 +102,11 @@ hurt_fx = {
   lifespan = 12,
   palette = palettes.red,
  },
+ ship_collision = {
+  spr_begin = 38,
+  lifespan = 12,
+  palette = palettes.red,
+ },
 }
 
 weapons = {
@@ -134,6 +139,11 @@ weapons = {
     team = 1,
     hurt_fx = hurt_fx.enemy_leech,
     },
+  },
+  ship_to_ship_collision = {
+   damage = 1,
+   palette = palettes.red,
+   hurt_fx = hurt_fx.ship_collision,
   },
 }
 
@@ -514,6 +524,7 @@ end
 
 function update_ships()
  foreach(ship.pool, ship.update)
+ update_player_enemy_collisions()
 end
 
 function remove_all_ships()
@@ -816,6 +827,16 @@ end
 function draw_screen_fx()
  for g in all(glitches) do
   draw_glitch(g.y, g.direction)
+ end
+end
+
+function update_player_enemy_collisions()
+ local r = player_ship:get_collision_rect()
+ for s in all(ship.pool) do
+  if s != player_ship and rect_collide(r, s:get_collision_rect()) then
+   hit_ship(player_ship, weapons.ship_to_ship_collision)
+   hit_ship(s, weapons.ship_to_ship_collision)
+  end
  end
 end
 
