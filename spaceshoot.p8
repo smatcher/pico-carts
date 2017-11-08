@@ -250,7 +250,7 @@ function init_starfield()
  })
 
  -- create values
- for i=1, 130 do
+ for i=1,90 do
   starfield.values[i] = {
    x = flr(rnd(128)),
    y = flr(rnd(128)),
@@ -263,7 +263,7 @@ function init_starfield()
   -- move down
   v.y = v.y + v.layer
   -- move with player
-  v.x = v.x - v.layer * input.x
+  v.x = v.x - v.layer * input.x * 0.4
   -- warp
   if v.x  < 0 then v.x = v.x + 128 end
   if v.x  > 128 then v.x = v.x - 128 end
