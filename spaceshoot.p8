@@ -4,68 +4,31 @@ __lua__
 --utils
 function copy(o)
  local c = {}
- for k,v in pairs(o) do
-  c[k] = v
- end
+ for k,v in pairs(o) do c[k] = v end
  return c
 end
 
-function peekr(addr)
- local r = peek(addr)
- return shr(r, 4)
+function peekr(addr) return shr(peek(addr), 4) end
+function peekl(addr) return band(peek(addr), 0x000f) end
+
+function read_palette(addr, pkfn)
+ local p = {}
+ for i=1,16 do p[i] = pkfn(addr + (i-1)*0x0040) end
+ return p
 end
 
-function peekl(addr)
- local r = peek(addr)
- return band(r, 0x000f)
+function read_npalettes(addr, n)
+ local p = {}
+ for i=1,n do p[i] = read_palette(addr + flr((i-1)/2), (i%2 == 1) and peekl or peekr) end
+ return p
 end
 
 function init_screen_fade_palettes()
- red_screen_fade_palette = {}
- for i=1,6 do
-  local p = {}
-  local addr = 0x003c + flr((i-1)/2)
-  local pkfn = (i%2 == 1) and peekl or peekr
-  for j=1,16 do
-   p[j] = pkfn(addr)
-   addr += 0x0040
-  end
-  red_screen_fade_palette[i] = p
- end
-
- default_screen_palette = {}
- for i=1,16 do
-  default_screen_palette[i] = peekr(0x003e + (i-1)*0x0040)
- end
-
- dead_screen_palette = {}
- for i=1,16 do
-  dead_screen_palette[i] = peekl(0x003f + (i-1)*0x0040)
- end
-
- face_palette = {}
- for i=1,16 do
-  local p = {}
-  local addr = 0x0800 + flr((i-1)/2)
-  local pkfn = (i%2 == 1) and peekl or peekr
-  for j=1,16 do
-   p[j] = pkfn(addr)
-   addr += 0x0040
-  end
-  face_palette[i] = p
- end
-
- ui_palette = {}
- for i=1,8 do
-  local p = {}
-  local addr = 0x0c08 + flr((i-1)/2)
-  local pkfn = (i%2 == 1) and peekl or peekr
-  for j=1,16 do
-   p[j] = pkfn(addr)
-   addr += 0x0040
-  end
-  ui_palette[i] = p
- end
+ default_screen_palette = read_palette(0x003e, peekr)
+ dead_screen_palette = read_palette(0x003f, peekl)
+ red_screen_fade_palette = read_npalettes(0x003c, 6)
+ face_palette = read_npalettes(0x0800, 16)
+ ui_palette = read_npalettes(0x0c08, 8)
 end
 
 function apply_palette(p, to_screen)
