@@ -10,6 +10,7 @@ end
 
 function peekr(addr) return shr(peek(addr), 4) end
 function peekl(addr) return band(peek(addr), 0x000f) end
+function rect_collide(r1, r2) return r1.x+r1.w > r2.x and r1.x < r2.x+r2.w and r1.y+r1.h > r2.y and r1.y < r2.y+r2.h  end
 
 function read_palette(addr, pkfn)
  local p = {}
@@ -32,13 +33,7 @@ function init_screen_fade_palettes()
 end
 
 function apply_palette(p, to_screen)
- for i=1, #p do
-  pal(i-1, p[i], to_screen or 0)
- end
-end
-
-function rect_collide(r1, r2)
- return r1.x+r1.w > r2.x and r1.x < r2.x+r2.w and r1.y+r1.h > r2.y and r1.y < r2.y+r2.h 
+ for i=1, #p do pal(i-1, p[i], to_screen or 0) end
 end
 
 palettes = {
@@ -592,6 +587,7 @@ function new_playership(x, y)
   ondestroyed = function(self)
    explosion:new({spr_begin = 3, lifespan = 9, palette = palettes.red}, self.x, self.y)
    del(light_sources, self.thruster_light_source)
+   init_hitanim() -- reset hit anim so the anim doesn't overrides dead_screen_palette
    apply_palette(dead_screen_palette, 1)
    player_alive = false
    time_since_player_death = 0
@@ -644,6 +640,7 @@ end
 function init_hitanim()
  hit_anim = 0
  run_hit_anim = false
+ glitches = {}
 end
 
 function draw_hitanim()
